@@ -1,0 +1,52 @@
+import sqlite3
+import os
+
+class DatabaseManager:
+    def __init__(self):
+        db_path = os.path.join(os.path.dirname(__file__), "library_app.db")
+        self.conn = sqlite3.connect(db_path)
+        self.cur = self.conn.cursor()
+        self.create_tables()
+
+    def create_tables(self):
+        self.cur.execute("""
+            CREATE TABLE IF NOT EXISTS library (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                название TEXT,
+                автор TEXT,
+                год INTEGER,
+                цена REAL
+            )
+        """)
+        self.cur.execute("""
+            CREATE TABLE IF NOT EXISTS publisher (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                название TEXT,
+                автор TEXT,
+                издатель TEXT
+            )
+        """)
+        self.conn.commit()
+
+    def get_columns(self, table):
+        self.cur.execute(f"PRAGMA table_info({table})")
+        return [col[1] for col in self.cur.fetchall()]
+
+    def get_all(self, table):
+        self.cur.execute(f"SELECT * FROM {table}")
+        return self.cur.fetchall()
+
+    def add_record(self, table, values):
+        columns = self.get_columns(table)[1:]  # пропускаем id
+        placeholders = ", ".join(["?"] * len(values))
+        sql = f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({placeholders})"
+        self.cur.execute(sql, values)
+        self.conn.commit()
+
+    def delete_record(self, table, record_id):
+        self.cur.execute(f"DELETE FROM {table} WHERE id = ?", (record_id,))
+        self.conn.commit()
+
+    def close(self):
+        self.cur.close()
+        self.conn.close()
